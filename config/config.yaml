@@ -1,0 +1,60 @@
+# Config Sync - Unified Sequence Configuration
+#
+# work_dir: base directory for all relative paths (src) and cwd for bash commands.
+
+work_dir: .
+
+# An ordered list of steps. Each step has an `action` and a `name`.
+#
+# Action types:
+#   copy      - copy src -> dst (supports pre_install, post_check)
+#   append    - append contents of src file to dst file
+#   exe_bash  - run a shell command
+#
+# All relative paths (src) resolve against work_dir.
+
+sequence:
+  # - action: exe_bash
+  #   name: setup-conda
+  #   pre_install: "which conda"
+  #   command: "bash scripts/install_conda.sh"
+
+  # - action: exe_bash
+  #   name: setup-npm
+  #   command: "bash scripts/install_npm.sh"
+
+  - action: copy
+    name: codex
+    src: ./backup/.codex
+    dst: ~/.codex
+    pre_install: "which codex || npm install -g @openai/codex"
+    post_check: "codex --version"
+
+  - action: copy
+    name: claude
+    src: ./backup/.claude
+    pre_install: "npm install -g @anthropic-ai/claude-code"
+    dst: ~/.claude
+
+  - action: copy
+    name: claude-code-router
+    src: ./backup/.claude-code-router
+    dst: ~/.claude-code-router
+    pre_install: "npm install -g @anthropic-ai/claude-code && npm install -g @musistudio/claude-code-router"
+
+  - action: copy
+    name: ssh_config
+    src: ./backup/.ssh
+    dst: ~/.ssh
+
+  # check ssh config
+  - action: exe_bash
+    name: ssh_check
+    command: "bash scripts/ssh_postcheck.sh"
+
+  - action: append
+    name: bashrc-extra
+    src: ./backup/.bashrc_extra
+    dst: ~/.bashrc
+
+

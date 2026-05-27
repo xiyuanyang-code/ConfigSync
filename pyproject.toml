@@ -1,0 +1,23 @@
+[project]
+name = "config-sync"
+version = "0.1.1"
+description = "A configurable tool to sync configuration files via a unified sequence."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0.3",
+]
+
+[project.scripts]
+config-sync = "config_sync.cli:main"
+
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
