@@ -1,6 +1,6 @@
-# Config Sync
+# SyncFlash
 
-> 一行命令完成服务器配置。定义你的配置文件，跑一个命令，搞定。
+> Lightning-fast configuration of your server!
 
 基于统一序列的服务器配置同步工具。支持三种操作：**copy**（带 pre/post 钩子的文件复制）、**append**（追加内容到已有文件）、**exe_bash**（执行 shell 脚本）。每一步都是交互式的 —— 替换前你能看到目标文件的当前内容，由你决定是否继续。
 
@@ -8,7 +8,7 @@
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/xiyuanyang-code/ConfigSync.git && cd ConfigSync
+git clone https://github.com/xiyuanyang-code/SyncFlash.git && cd SyncFlash
 
 # 2. 激活环境并安装依赖
 source .venv/bin/activate

@@ -1,6 +1,6 @@
-# Config Sync
+# SyncFlash
 
-> One-line server provisioning. Define your config files, run one command, done.
+> Lightning-fast configuration of your server!
 
 A unified sequence-based tool for syncing configuration files to a new server. Supports three action types: **copy** files with pre/post hooks, **append** content to existing files, and **execute** arbitrary shell scripts. Every step is interactive — you see what's being replaced before it happens.
 
@@ -8,7 +8,7 @@ A unified sequence-based tool for syncing configuration files to a new server. S
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/xiyuanyang-code/ConfigSync.git && cd ConfigSync
+git clone https://github.com/xiyuanyang-code/SyncFlash.git && cd SyncFlash
 
 # 2. Activate environment and install dependencies
 source .venv/bin/activate
