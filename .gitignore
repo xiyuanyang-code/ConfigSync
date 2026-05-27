@@ -11,3 +11,7 @@ wheels/
 backup
 
 uv.lock
+config/config.yaml
+!config/config_example.yaml
+
+scripts/set_git_user.sh

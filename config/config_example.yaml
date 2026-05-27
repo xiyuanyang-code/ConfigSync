@@ -57,4 +57,3 @@ sequence:
     src: ./backup/.bashrc_extra
     dst: ~/.bashrc
 
-
