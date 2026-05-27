@@ -53,6 +53,38 @@ def print_step_header(index: int, total: int, action: str, name: str) -> None:
     console.print(Panel(label, border_style="blue", padding=(0, 1)))
 
 
+# ─── Shared pre/post helpers ──────────────────────────────────────────────────
+
+
+def _run_pre_install(step: dict, work_dir: str, dry_run: bool) -> bool:
+    """Run pre_install if defined. Returns False if user chooses to skip."""
+    pre_install = step.get("pre_install")
+    if not pre_install:
+        return True
+    if dry_run:
+        console.print(f"  [yellow]Would run pre_install:[/yellow] {pre_install}")
+        return True
+    console.print(f"  [dim]$ {pre_install}[/dim]")
+    success, _ = run_command_interactive(pre_install, cwd=work_dir)
+    if not success:
+        if not confirm_continue(step.get("name", "unnamed")):
+            console.print("  [yellow]Skipped by user[/yellow]")
+            return False
+    return True
+
+
+def _run_post_check(step: dict, work_dir: str, dry_run: bool) -> None:
+    """Run post_check if defined."""
+    post_check = step.get("post_check")
+    if not post_check:
+        return
+    if dry_run:
+        console.print(f"  [yellow]Would run post_check:[/yellow] {post_check}")
+        return
+    console.print(f"  [dim]$ {post_check}[/dim]")
+    run_command_interactive(post_check, cwd=work_dir)
+
+
 # ─── File copy helpers ────────────────────────────────────────────────────────
 
 
@@ -78,7 +110,6 @@ def _copy_dir_overlay(src_path: str, dst_path: str, force: bool) -> bool:
     Files in dst that don't exist in src are preserved.
     For each file in src, show the existing dst file content before overwriting.
     """
-    # Collect files to copy
     files_to_copy = []
     for root, _, files in os.walk(src_path):
         for fname in sorted(files):
@@ -89,7 +120,6 @@ def _copy_dir_overlay(src_path: str, dst_path: str, force: bool) -> bool:
         console.print("  [dim]No files in source directory[/dim]")
         return False
 
-    # Check which files need user confirmation
     overwrite_map = {}
     if not force and os.path.exists(dst_path):
         overwrite_map = confirm_overwrite_dir(dst_path, src_path)
@@ -100,7 +130,6 @@ def _copy_dir_overlay(src_path: str, dst_path: str, force: bool) -> bool:
         src_file = os.path.join(src_path, rel)
         dst_file = os.path.join(dst_path, rel)
 
-        # Skip if user said no
         if rel in overwrite_map and not overwrite_map[rel]:
             console.print(f"    [yellow]Skipped:[/yellow] {rel}")
             skipped += 1
@@ -122,18 +151,11 @@ def _copy_dir_overlay(src_path: str, dst_path: str, force: bool) -> bool:
 # ─── Action: copy ─────────────────────────────────────────────────────────────
 
 
-def run_copy(
-    step: dict,
-    work_dir: str,
-    dry_run: bool = False,
-    force: bool = False,
-) -> bool:
+def run_copy(step: dict, work_dir: str, dry_run: bool = False, force: bool = False) -> bool:
     """Copy src -> dst with optional pre_install and post_check."""
     name = step.get("name", "unnamed")
     src = step.get("src")
     dst = step.get("dst")
-    pre_install = step.get("pre_install")
-    post_check = step.get("post_check")
 
     if not src or not dst:
         console.print(f"  [red]Error: copy step '{name}' requires src and dst[/red]")
@@ -142,19 +164,9 @@ def run_copy(
     src_path = src if os.path.isabs(src) else os.path.join(work_dir, src)
     dst_path = expand_dst(dst)
 
-    # pre_install
-    if pre_install:
-        if dry_run:
-            console.print(f"  [yellow]Would run pre_install:[/yellow] {pre_install}")
-        else:
-            console.print(f"  [dim]$ {pre_install}[/dim]")
-            success, _ = run_command_interactive(pre_install, cwd=work_dir)
-            if not success:
-                if not confirm_continue(name):
-                    console.print("  [yellow]Skipped by user[/yellow]")
-                    return False
+    if not _run_pre_install(step, work_dir, dry_run):
+        return False
 
-    # copy
     if not os.path.exists(src_path):
         console.print(f"  [red]Source not found, skipping:[/red] {src_path}")
         return False
@@ -167,25 +179,14 @@ def run_copy(
         else:
             _copy_file(src_path, dst_path, force)
 
-    # post_check
-    if post_check:
-        if dry_run:
-            console.print(f"  [yellow]Would run post_check:[/yellow] {post_check}")
-        else:
-            console.print(f"  [dim]$ {post_check}[/dim]")
-            run_command_interactive(post_check, cwd=work_dir)
-
+    _run_post_check(step, work_dir, dry_run)
     return True
 
 
 # ─── Action: append ───────────────────────────────────────────────────────────
 
 
-def run_append(
-    step: dict,
-    work_dir: str,
-    dry_run: bool = False,
-) -> bool:
+def run_append(step: dict, work_dir: str, dry_run: bool = False, force: bool = False) -> bool:
     """Append contents of src file to dst file."""
     name = step.get("name", "unnamed")
     src = step.get("src")
@@ -198,12 +199,16 @@ def run_append(
     src_path = src if os.path.isabs(src) else os.path.join(work_dir, src)
     dst_path = expand_dst(dst)
 
+    if not _run_pre_install(step, work_dir, dry_run):
+        return False
+
     if not os.path.exists(src_path):
         console.print(f"  [red]Source not found, skipping:[/red] {src_path}")
         return False
 
     if dry_run:
         console.print(f"  [yellow]Would append:[/yellow] {src_path} >> {dst_path}")
+        _run_post_check(step, work_dir, dry_run)
         return True
 
     with open(src_path, "r") as f:
@@ -217,52 +222,44 @@ def run_append(
         f.write(content)
 
     console.print(f"  [green]Appended:[/green] {src_path} >> {dst_path}")
+
+    _run_post_check(step, work_dir, dry_run)
     return True
 
 
 # ─── Action: exe_bash ─────────────────────────────────────────────────────────
 
 
-def run_exe_bash(
-    step: dict,
-    work_dir: str,
-    dry_run: bool = False,
-) -> bool:
+def run_exe_bash(step: dict, work_dir: str, dry_run: bool = False, force: bool = False) -> bool:
     """Run a shell command."""
     name = step.get("name", "unnamed")
     command = step.get("command")
-    pre_install = step.get("pre_install")
 
     if not command:
         console.print(f"  [red]Error: exe_bash step '{name}' requires command[/red]")
         return False
 
-    # pre_install
-    if pre_install:
-        if dry_run:
-            console.print(f"  [yellow]Would run pre_install:[/yellow] {pre_install}")
-        else:
-            console.print(f"  [dim]$ {pre_install}[/dim]")
-            success, _ = run_command_interactive(pre_install, cwd=work_dir)
-            if not success:
-                if not confirm_continue(name):
-                    console.print("  [yellow]Skipped by user[/yellow]")
-                    return False
+    if not _run_pre_install(step, work_dir, dry_run):
+        return False
 
     if dry_run:
         console.print(f"  [yellow]Would run:[/yellow] {command}")
+        _run_post_check(step, work_dir, dry_run)
         return True
 
     console.print(f"  [dim]$ {command}[/dim]")
-    return run_command(command, cwd=work_dir)
+    result = run_command(command, cwd=work_dir)
+
+    _run_post_check(step, work_dir, dry_run)
+    return result
 
 
 # ─── Dispatcher ───────────────────────────────────────────────────────────────
 
 ACTION_HANDLERS = {
-    "copy": lambda step, wk, dry, force: run_copy(step, wk, dry, force),
-    "append": lambda step, wk, dry, force: run_append(step, wk, dry),
-    "exe_bash": lambda step, wk, dry, force: run_exe_bash(step, wk, dry),
+    "copy": run_copy,
+    "append": run_append,
+    "exe_bash": run_exe_bash,
 }
 
 
@@ -281,7 +278,6 @@ def run_sync(
         console.print("[yellow]No sequence defined in config.[/yellow]")
         return
 
-    # Banner
     console.print()
     console.print(Panel(
         f"[bold]config-sync[/bold]\n"
@@ -338,10 +334,6 @@ def list_sequence(config_path: str | None = None) -> None:
             src = step.get("src", "?")
             dst = step.get("dst", "?")
             details_parts.append(f"{src} -> {dst}")
-            if step.get("pre_install"):
-                details_parts.append(f"[dim]pre:[/dim] {step['pre_install']}")
-            if step.get("post_check"):
-                details_parts.append(f"[dim]post:[/dim] {step['post_check']}")
         elif action == "append":
             src = step.get("src", "?")
             dst = step.get("dst", "?")
@@ -349,8 +341,12 @@ def list_sequence(config_path: str | None = None) -> None:
         elif action == "exe_bash":
             cmd = step.get("command", "?")
             details_parts.append(cmd)
-            if step.get("pre_install"):
-                details_parts.append(f"[dim]pre:[/dim] {step['pre_install']}")
+
+        # All actions support pre_install and post_check
+        if step.get("pre_install"):
+            details_parts.append(f"[dim]pre:[/dim] {step['pre_install']}")
+        if step.get("post_check"):
+            details_parts.append(f"[dim]post:[/dim] {step['post_check']}")
 
         details = "\n".join(details_parts) if details_parts else "[dim]-[/dim]"
         table.add_row(str(i), action, name, details)

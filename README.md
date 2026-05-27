@@ -25,11 +25,13 @@ config-sync
 
 The core idea is simple: define an ordered `sequence` of steps in `config/config.yaml`, then run `config-sync`. Each step is one of three types:
 
-| Action | What it does | Extra fields |
-|--------|-------------|--------------|
-| `copy` | Copy src -> dst (file or directory) | `pre_install`, `post_check` |
-| `append` | Append src file content to dst file | - |
+| Action | What it does | Key fields |
+|--------|-------------|------------|
+| `copy` | Copy src -> dst (file or directory) | `src`, `dst` |
+| `append` | Append src file content to dst file | `src`, `dst` |
 | `exe_bash` | Run a shell command | `command` |
+
+All actions support `pre_install` and `post_check` hooks.
 
 For `copy` actions targeting directories, files are **overlaid** — only files present in `src` are replaced in `dst`. Existing files in `dst` that aren't in `src` are preserved. Before each overwrite, you see the **current destination file content** and decide whether to proceed.
 
@@ -107,8 +109,8 @@ Copies files or directories from `src` to `dst`. For directories, performs an **
 |-------|----------|-------------|
 | `src` | yes | Source path (relative to `work_dir`) |
 | `dst` | yes | Destination path (supports `~`) |
-| `pre_install` | no | Shell command to run **before** copying |
-| `post_check` | no | Shell command to run **after** copying |
+| `pre_install` | no | Shell command to run **before** the action |
+| `post_check` | no | Shell command to run **after** the action |
 
 **Lifecycle:** `pre_install` -> show existing dst content -> user confirms -> copy -> `post_check`
 
@@ -120,6 +122,8 @@ Appends the full content of `src` file to `dst` file. Creates `dst` if it doesn'
 |-------|----------|-------------|
 | `src` | yes | Source file path |
 | `dst` | yes | Target file to append to |
+| `pre_install` | no | Shell command to run **before** the action |
+| `post_check` | no | Shell command to run **after** the action |
 
 ### Action: `exe_bash`
 
@@ -128,7 +132,10 @@ Runs a shell command with `work_dir` as the working directory.
 | Field | Required | Description |
 |-------|----------|-------------|
 | `command` | yes | The shell command to execute |
-| `pre_install` | no | Shell command to run before the main command |
+| `pre_install` | no | Shell command to run **before** the action |
+| `post_check` | no | Shell command to run **after** the action |
+
+> **Note:** All three actions support `pre_install` and `post_check`. If `pre_install` fails, you can choose to skip the step. All hooks stream stdout/stderr in real-time.
 
 ## CLI Reference
 

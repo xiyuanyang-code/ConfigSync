@@ -25,11 +25,13 @@ config-sync
 
 核心思路很简单：在 `config/config.yaml` 中定义一个有序的 `sequence` 步骤列表，然后运行 `config-sync`。每一步是以下三种类型之一：
 
-| 操作 | 作用 | 额外字段 |
+| 操作 | 作用 | 关键字段 |
 |------|------|----------|
-| `copy` | 复制 src -> dst（文件或目录） | `pre_install`、`post_check` |
-| `append` | 将 src 文件内容追加到 dst 文件 | - |
+| `copy` | 复制 src -> dst（文件或目录） | `src`、`dst` |
+| `append` | 将 src 文件内容追加到 dst 文件 | `src`、`dst` |
 | `exe_bash` | 执行 shell 命令 | `command` |
+
+所有操作都支持 `pre_install` 和 `post_check` 钩子。
 
 对于目录的 `copy` 操作，采用**覆盖合并**策略 —— 只替换 src 中存在的文件，dst 中有但 src 中没有的文件会保留。每次覆盖前，你会看到**目标文件的当前内容**，然后决定是否继续。
 
@@ -107,8 +109,8 @@ sequence:
 |------|------|------|
 | `src` | 是 | 源路径（相对于 `work_dir`） |
 | `dst` | 是 | 目标路径（支持 `~`） |
-| `pre_install` | 否 | 复制**前**执行的 shell 命令 |
-| `post_check` | 否 | 复制**后**执行的 shell 命令 |
+| `pre_install` | 否 | 操作**前**执行的 shell 命令 |
+| `post_check` | 否 | 操作**后**执行的 shell 命令 |
 
 **生命周期：** `pre_install` -> 展示目标文件当前内容 -> 用户确认 -> 复制 -> `post_check`
 
@@ -120,6 +122,8 @@ sequence:
 |------|------|------|
 | `src` | 是 | 源文件路径 |
 | `dst` | 是 | 要追加的目标文件 |
+| `pre_install` | 否 | 操作**前**执行的 shell 命令 |
+| `post_check` | 否 | 操作**后**执行的 shell 命令 |
 
 ### 操作类型：`exe_bash`
 
@@ -128,7 +132,10 @@ sequence:
 | 字段 | 必填 | 说明 |
 |------|------|------|
 | `command` | 是 | 要执行的 shell 命令 |
-| `pre_install` | 否 | 主命令执行前运行的命令 |
+| `pre_install` | 否 | 操作**前**执行的 shell 命令 |
+| `post_check` | 否 | 操作**后**执行的 shell 命令 |
+
+> **注意：** 三种操作都支持 `pre_install` 和 `post_check`。如果 `pre_install` 失败，你可以选择跳过该步骤。所有钩子命令都会实时输出 stdout/stderr。
 
 ## CLI 参考
 
